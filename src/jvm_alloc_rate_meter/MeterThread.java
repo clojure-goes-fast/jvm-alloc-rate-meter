@@ -23,15 +23,17 @@ public class MeterThread extends Thread {
     }
 
     public void run() {
-        double multiplier = 1000.0 / intervalMs;
+        long lastTime = 0;
         try {
             long prevUsage = -1, prevGcCounts = -1;
             while (doRun) {
                 long usage = usedHeap();
                 long gcCounts = gcCounts();
+                long ts = System.currentTimeMillis();
 
                 if ((gcCounts == prevGcCounts) && (usage >= prevUsage)) {
-                    long rate = Math.round((usage - prevUsage) * multiplier);
+                    long deltaTime = ts - lastTime;
+                    long rate = Math.round((usage - prevUsage) * (1000.0 / deltaTime));
                     callback.accept(rate);
                 }
 
@@ -39,6 +41,7 @@ public class MeterThread extends Thread {
 
                 prevUsage = usage;
                 prevGcCounts = gcCounts;
+                lastTime = ts;
             }
         } catch (InterruptedException e) {
             System.err.println("MeterThread terminating...");
