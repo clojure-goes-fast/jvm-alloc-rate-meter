@@ -18,7 +18,9 @@ First, add it to your dependencies:
 ### Java
 
 You are safe to use this library in any Java project, it doesn't explicitly
-depend on Clojure (or anything else).
+depend on Clojure (or anything else). You can also forgo the dependency and just
+paste [MeterThread](src/jvm_alloc_rate_meter/MeterThread.java) class directly
+into your project.
 
 ```java
 import jvm_alloc_rate_meter.MeterThread;
