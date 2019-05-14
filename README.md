@@ -35,12 +35,11 @@ The first argument to MeterThread's constructor is a LongConsumer callback that
 will be called with every new measurement of allocation rate in bytes/sec.
 
 The second (optional) argument is the measurement interval in milliseconds (1000
-by default). Note that the callback might not be called on each interval,
-because we can reliably measure the allocation rate only if the garbage
-collection hasn't been performed between two iterations. The default interval
-should work fine most of the time; unless your allocation rate is so high that
-the GC is triggered every second or two — in that case, in order not to lose
-most of the measurements, try to set the interval to a lower value.
+by default). Regardless of the interval length, the reported rate will be
+normalized to per-second value. Note that the callback might not be called on
+each interval, because under certain conditions we can't reliably measure the
+allocation rate (if both the garbage collection happened and a few of the
+heavy-allocating threads died).
 
 Here's an example of combining jvm-alloc-rate-meter with [Dropwizard
 Metrics](https://github.com/dropwizard/metrics):
@@ -54,7 +53,7 @@ import java.util.concurrent.TimeUnit;
 // ...
 
 Histogram hist = new Histogram(new SlidingTimeWindowArrayReservoir(10, TimeUnit.SECONDS));
-MeterThread mt = new MeterThread((r) -> hist.update(r));
+MeterThread mt = new MeterThread(hist::update);
 mt.start()
 
 // Now, you can forward this histogram to Graphite, or check the values manually, e.g.:

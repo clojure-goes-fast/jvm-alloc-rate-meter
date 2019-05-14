@@ -13,7 +13,7 @@
   (let [iw (MeterThread. (reify LongConsumer
                            (accept [_ v]
                              (callback-fn v)))
-                      (or interval-ms 1000))]
+                         (or interval-ms 1000))]
     (.start iw)
     #(.terminate iw)))
 

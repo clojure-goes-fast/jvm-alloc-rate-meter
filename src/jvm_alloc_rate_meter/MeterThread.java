@@ -1,5 +1,6 @@
 package jvm_alloc_rate_meter;
 
+import com.sun.management.ThreadMXBean;
 import java.util.function.LongConsumer;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -22,26 +23,48 @@ public class MeterThread extends Thread {
         setDaemon(true);
     }
 
-    public void run() {
-        long lastTime = 0;
-        try {
-            long prevUsage = -1, prevGcCounts = -1;
-            while (doRun) {
-                long usage = usedHeap();
-                long gcCounts = gcCounts();
-                long ts = System.currentTimeMillis();
+    // Basically, we have two ways of measuring the allocation rate.
+    // First relies on checking heap usage between two points of time and
+    // substracting. This is accurate, but works only if the GC didn't trigger
+    // in the meantime.
+    // Second works by taking allocation stats by each alive thread. This is
+    // more reliable, but potentially less accurate (because threads can go
+    // away, and we lose their allocation stats).
+    // The idea is to use the first approach if GC didn't happen, and the second
+    // one if it did.
 
-                if ((gcCounts == prevGcCounts) && (usage >= prevUsage)) {
-                    long deltaTime = ts - lastTime;
-                    long rate = Math.round((usage - prevUsage) * (1000.0 / deltaTime));
-                    callback.accept(rate);
+    public void run() {
+        long lastTime = 0, lastHeapUsage = -1, lastGcCounts = -1, lastThreadAllocated = -1;
+        try {
+            while (doRun) {
+                long heapUsage = usedHeap();
+                long gcCounts = gcCounts();
+                long threadAllocated = allocatedByAllThreads();
+                long time = System.currentTimeMillis();
+
+                double multiplier = 1000.0 / (time - lastTime);
+                long deltaUsage = heapUsage - lastHeapUsage;
+                long deltaThreadAllocated = threadAllocated - lastThreadAllocated;
+
+                if (lastTime != 0) {
+                    if ((gcCounts == lastGcCounts) && (deltaUsage >= 0)) {
+                        long rate = Math.round(deltaUsage * multiplier);
+                        callback.accept(rate);
+                    } else if (deltaThreadAllocated >= 0) {
+                        long rate = Math.round(deltaThreadAllocated * multiplier);
+                        callback.accept(rate);
+                    } else {
+                        // Apparently, neither approach did well, just skip this
+                        // iteration.
+                    }
                 }
 
                 Thread.sleep(intervalMs);
 
-                prevUsage = usage;
-                prevGcCounts = gcCounts;
-                lastTime = ts;
+                lastTime = time;
+                lastHeapUsage = heapUsage;
+                lastGcCounts = gcCounts;
+                lastThreadAllocated = threadAllocated;
             }
         } catch (InterruptedException e) {
             System.err.println("MeterThread terminating...");
@@ -63,5 +86,17 @@ public class MeterThread extends Thread {
             total += bean.getCollectionCount();
         }
         return total;
+    }
+
+    private static long allocatedByAllThreads() {
+        ThreadMXBean bean = (ThreadMXBean)ManagementFactory.getThreadMXBean();
+        long[] ids = bean.getAllThreadIds();
+        long[] allocatedBytes = bean.getThreadAllocatedBytes(ids);
+        long result = 0;
+        // This is not correct because we will lose allocation data from threads
+        // that died. Oh well.
+        for (long abytes : allocatedBytes)
+            result += abytes;
+        return result;
     }
 }
