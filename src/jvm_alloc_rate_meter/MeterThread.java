@@ -1,6 +1,7 @@
 package jvm_alloc_rate_meter;
 
 import com.sun.management.ThreadMXBean;
+import java.math.BigInteger;
 import java.util.function.LongConsumer;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -34,24 +35,26 @@ public class MeterThread extends Thread {
     // one if it did.
 
     public void run() {
-        long lastTime = 0, lastHeapUsage = -1, lastGcCounts = -1, lastThreadAllocated = -1;
+        long lastTime = 0, lastHeapUsage = -1, lastGcCounts = -1;
+        BigInteger lastThreadAllocated = BigInteger.valueOf(-1);
         try {
             while (doRun) {
                 long heapUsage = usedHeap();
                 long gcCounts = gcCounts();
-                long threadAllocated = allocatedByAllThreads();
+                BigInteger threadAllocated = allocatedByAllThreads();
                 long time = System.currentTimeMillis();
 
                 double multiplier = 1000.0 / (time - lastTime);
                 long deltaUsage = heapUsage - lastHeapUsage;
-                long deltaThreadAllocated = threadAllocated - lastThreadAllocated;
 
                 if (lastTime != 0) {
                     if ((gcCounts == lastGcCounts) && (deltaUsage >= 0)) {
                         long rate = Math.round(deltaUsage * multiplier);
                         callback.accept(rate);
-                    } else if (deltaThreadAllocated >= 0) {
-                        long rate = Math.round(deltaThreadAllocated * multiplier);
+                    } else if (threadAllocated.compareTo(BigInteger.ZERO) >= 0 &&
+                               lastThreadAllocated.compareTo(BigInteger.ZERO) >= 0 &&
+                               threadAllocated.compareTo(BigInteger.ZERO) >= 0) {
+                        long rate = Math.round(threadAllocated.subtract(lastThreadAllocated).longValue() * multiplier);
                         callback.accept(rate);
                     } else {
                         // Apparently, neither approach did well, just skip this
@@ -88,15 +91,16 @@ public class MeterThread extends Thread {
         return total;
     }
 
-    private static long allocatedByAllThreads() {
+    /** Total allocation can overflow a long, so using BigInt here. **/
+    private static BigInteger allocatedByAllThreads() {
         ThreadMXBean bean = (ThreadMXBean)ManagementFactory.getThreadMXBean();
         long[] ids = bean.getAllThreadIds();
         long[] allocatedBytes = bean.getThreadAllocatedBytes(ids);
-        long result = 0;
+        BigInteger result = BigInteger.ZERO;
         // This is not correct because we will lose allocation data from threads
         // that died. Oh well.
         for (long abytes : allocatedBytes)
-            result += abytes;
+            result = result.add(BigInteger.valueOf(abytes));
         return result;
     }
 }
