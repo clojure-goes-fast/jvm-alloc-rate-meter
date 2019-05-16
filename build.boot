@@ -1,6 +1,6 @@
 (task-options!
  pom {:project     'com.clojure-goes-fast/jvm-alloc-rate-meter
-      :version     "0.1.3-SNAPSHOT"
+      :version     "0.1.3"
       :description "Measure JVM heap allocation rate in real time"
       :url         "http://github.com/clojure-goes-fast/jvm-alloc-rate-meter"
       :scm         {:url "http://github.com/clojure-goes-fast/jvm-alloc-rate-meter"}
