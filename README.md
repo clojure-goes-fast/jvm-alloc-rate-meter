@@ -29,6 +29,9 @@ import jvm_alloc_rate_meter.MeterThread;
 
 MeterThread t = new MeterThread((r) -> System.out.println("Rate is: " + (r / 1e6) + " MB/sec"));
 
+// To start the meter thread
+t.start();
+
 // To stop the meter thread
 t.terminate();
 ```
