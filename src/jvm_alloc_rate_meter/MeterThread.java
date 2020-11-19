@@ -39,13 +39,15 @@ public class MeterThread extends Thread {
         BigInteger lastThreadAllocated = BigInteger.valueOf(-1);
         try {
             while (doRun) {
+                long time = System.currentTimeMillis();
+                double multiplier = 1000.0 / (time - lastTime);
+
                 long heapUsage = usedHeap();
                 long gcCounts = gcCounts();
-                BigInteger threadAllocated = allocatedByAllThreads();
-                long time = System.currentTimeMillis();
-
-                double multiplier = 1000.0 / (time - lastTime);
                 long deltaUsage = heapUsage - lastHeapUsage;
+
+                BigInteger threadAllocated = allocatedByAllThreads();
+                BigInteger deltaAllocated = threadAllocated.subtract(lastThreadAllocated);
 
                 if (lastTime != 0) {
                     if ((gcCounts == lastGcCounts) && (deltaUsage >= 0)) {
@@ -53,8 +55,8 @@ public class MeterThread extends Thread {
                         callback.accept(rate);
                     } else if (threadAllocated.compareTo(BigInteger.ZERO) >= 0 &&
                                lastThreadAllocated.compareTo(BigInteger.ZERO) >= 0 &&
-                               threadAllocated.compareTo(BigInteger.ZERO) >= 0) {
-                        long rate = Math.round(threadAllocated.subtract(lastThreadAllocated).longValue() * multiplier);
+                               deltaAllocated.compareTo(BigInteger.ZERO) >= 0) {
+                        long rate = Math.round(deltaAllocated.longValue() * multiplier);
                         callback.accept(rate);
                     } else {
                         // Apparently, neither approach did well, just skip this
