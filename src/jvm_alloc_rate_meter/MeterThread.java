@@ -2,14 +2,20 @@ package jvm_alloc_rate_meter;
 
 import com.sun.management.ThreadMXBean;
 import java.math.BigInteger;
+import java.util.List;
 import java.util.function.LongConsumer;
+import java.lang.management.MemoryMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 
 public class MeterThread extends Thread {
 
-    private LongConsumer callback;
-    private int intervalMs;
+    private final MemoryMXBean memoryBean;
+    private final ThreadMXBean threadBean;
+    private final List<GarbageCollectorMXBean> gcBeans;
+
+    private final LongConsumer callback;
+    private final int intervalMs;
 
     private volatile boolean doRun = true;
 
@@ -19,6 +25,11 @@ public class MeterThread extends Thread {
 
     public MeterThread(LongConsumer callback, int intervalMs) {
         super("jvm-alloc-rate-meter-thread");
+
+        this.memoryBean = ManagementFactory.getMemoryMXBean();
+        this.threadBean = (ThreadMXBean)ManagementFactory.getThreadMXBean();
+        this.gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
+
         this.callback = callback;
         this.intervalMs = intervalMs;
         setDaemon(true);
@@ -80,24 +91,23 @@ public class MeterThread extends Thread {
         doRun = false;
     }
 
-    private static long usedHeap() {
-        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
+    private long usedHeap() {
+        return memoryBean.getHeapMemoryUsage().getUsed();
     }
 
     /** Returns total number of GC cycles since the start of the VM. **/
-    private static long gcCounts() {
+    private long gcCounts() {
         long total = 0;
-        for (GarbageCollectorMXBean bean : ManagementFactory.getGarbageCollectorMXBeans()) {
+        for (GarbageCollectorMXBean bean : gcBeans) {
             total += bean.getCollectionCount();
         }
         return total;
     }
 
     /** Total allocation can overflow a long, so using BigInt here. **/
-    private static BigInteger allocatedByAllThreads() {
-        ThreadMXBean bean = (ThreadMXBean)ManagementFactory.getThreadMXBean();
-        long[] ids = bean.getAllThreadIds();
-        long[] allocatedBytes = bean.getThreadAllocatedBytes(ids);
+    private BigInteger allocatedByAllThreads() {
+        long[] ids = threadBean.getAllThreadIds();
+        long[] allocatedBytes = threadBean.getThreadAllocatedBytes(ids);
         BigInteger result = BigInteger.ZERO;
         // This is not correct because we will lose allocation data from threads
         // that died. Oh well.
