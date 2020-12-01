@@ -56,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 Histogram hist = new Histogram(new SlidingTimeWindowArrayReservoir(10, TimeUnit.SECONDS));
 MeterThread mt = new MeterThread(hist::update);
-mt.start()
+mt.start();
 
 // Now, you can forward this histogram to Graphite, or check the values manually, e.g.:
 hist.getSnaphot.getMean();
