@@ -28,6 +28,7 @@ import jvm_alloc_rate_meter.MeterThread;
 // ...
 
 MeterThread t = new MeterThread((r) -> System.out.println("Rate is: " + (r / 1e6) + " MB/sec"));
+t.start();
 
 // To stop the meter thread
 t.terminate();
@@ -88,4 +89,4 @@ library from Java for the details.
 jvm-hiccup-meter is distributed under the Eclipse Public License. See
 [LICENSE](LICENSE).
 
-Copyright 2018 Alexander Yakushev
+Copyright 2018-2022 Alexander Yakushev
