@@ -36,12 +36,12 @@ public class MeterThread extends Thread {
     }
 
     // Basically, we have two ways of measuring the allocation rate.
-    // First relies on checking heap usage between two points of time and
-    // substracting. This is accurate, but works only if the GC didn't trigger
-    // in the meantime.
-    // Second works by taking allocation stats by each alive thread. This is
-    // more reliable, but potentially less accurate (because threads can go
-    // away, and we lose their allocation stats).
+    // The first relies on checking heap usage between two points in time and
+    // subtracting. This is accurate but works only if the GC didn't trigger in
+    // the meantime.
+    // The second works by taking allocation stats by each alive thread. This is
+    // more reliable but potentially less accurate (because threads can go away,
+    // and we lose their allocation stats).
     // The idea is to use the first approach if GC didn't happen, and the second
     // one if it did.
 
@@ -109,8 +109,9 @@ public class MeterThread extends Thread {
         long[] ids = threadBean.getAllThreadIds();
         long[] allocatedBytes = threadBean.getThreadAllocatedBytes(ids);
         BigInteger result = BigInteger.ZERO;
-        // This is not correct because we will lose allocation data from threads
-        // that died. Oh well.
+        // This is approach is not entirely correct because doesn't see the
+        // allocation data from threads that died since the last iteration. Oh
+        // well, doing best effort.
         for (long abytes : allocatedBytes)
             result = result.add(BigInteger.valueOf(abytes));
         return result;
