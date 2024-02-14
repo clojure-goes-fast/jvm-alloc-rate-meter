@@ -109,9 +109,9 @@ public class MeterThread extends Thread {
         long[] ids = threadBean.getAllThreadIds();
         long[] allocatedBytes = threadBean.getThreadAllocatedBytes(ids);
         BigInteger result = BigInteger.ZERO;
-        // This is approach is not entirely correct because doesn't see the
+        // This approach is not entirely correct because it doesn't see the
         // allocation data from threads that died since the last iteration. Oh
-        // well, doing best effort.
+        // well, just making the best effort.
         for (long abytes : allocatedBytes)
             result = result.add(BigInteger.valueOf(abytes));
         return result;

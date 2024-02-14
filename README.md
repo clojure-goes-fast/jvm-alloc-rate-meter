@@ -89,4 +89,4 @@ library from Java for the details.
 jvm-hiccup-meter is distributed under the Eclipse Public License. See
 [LICENSE](LICENSE).
 
-Copyright 2018-2022 Alexander Yakushev
+Copyright 2018-2024 Alexander Yakushev

@@ -5,10 +5,10 @@
 (defn start-alloc-rate-meter
   "Start the allocation meter thread. It will measure the heap object allocation
   rate every `interval-ms` (1000 by default) and call `callback-fn` with the
-  allocation rate in bytes/sec. Note that the rate will not be reported every
-  `interval-ms` as the iterations that happen accross a GC cycle are discarded.
+  allocation rate in bytes/sec. Note that the rate might not be reported every
+  `interval-ms` as some iterations may not produce reliable data.
 
-  Returns a nullary function which when called terminates the measuring thread."
+  Returns a nullary function which terminates the measuring thread when invoked."
   [callback-fn & {:keys [interval-ms]}]
   (let [iw (MeterThread. (reify LongConsumer
                            (accept [_ v]
